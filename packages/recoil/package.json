@@ -12,7 +12,7 @@
   "type": "commonjs",
   "private": true,
   "dependencies": {
-    "recoil": "^1.0.0"
+    "recoil": "^0.7.7"
   }
 }
 
