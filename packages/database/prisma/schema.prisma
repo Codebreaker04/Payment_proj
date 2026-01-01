@@ -11,10 +11,67 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model User{
-  id Int @id @default(autoincrement())
-  email String @unique
+model User {
+  id       String  @id @default(uuid())
+  email    String  @unique
+  phone    String? @unique // stored as +9123456778809
   password String?
+  name     String?
+
+  wallet Wallet?
+
+  CreatedAt DateTime  @default(now())
+  UpdatedAt DateTime  @updatedAt
+  DeletedAt DateTime?
+}
+
+model Wallet {
+  id      String  @id @default(uuid())
+  userId  String  @unique
+  balance Decimal @default(0.0)
+
+  user                 User          @relation(fields: [userId], references: [id])
+  senttransactions     Transaction[] @relation("SentTransactions")
+  receivedtransactions Transaction[] @relation("ReceivedTransactions")
+
+  CreatedAt DateTime  @default(now())
+  UpdatedAt DateTime  @updatedAt
+  DeletedAt DateTime?
+}
+
+model Transaction {
+  id         String @id @default(uuid())
+  refrenceId String @unique
+
+  senderId   String?
+  receiverId String?
+
+  sender   Wallet? @relation("SentTransactions", fields: [senderId], references: [id])
+  receiver Wallet? @relation("ReceivedTransactions", fields: [receiverId], references: [id])
+
+  type   TransactionType
+  status TransactionStatus
+
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+enum TransactionStatus {
+  Pending
+  Completed
+  Failed
+  Refunded
+}
+
+enum TransactionType {
+  P2P_Transfer
+  credit
+  debit
+  refund
 }
