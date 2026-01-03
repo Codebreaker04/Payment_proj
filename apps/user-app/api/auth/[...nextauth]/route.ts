@@ -1,41 +1,45 @@
-import prismaClient from "@/lib/prisma/client";
-import nextAuth from "next-auth";
+import { prisma } from "@repo/database";
+import CredentialsProvider from "next-auth/providers/credentials";
+import genrateToken from "../../../utils/auth.ts";
+import bcrypt from "bcrypt";
+import NextAuth from "next-auth";
 
-export default nextAuth({
+export default NextAuth({
   providers: [
-    CredentialsProvider(
-      {
-        name: "Credentials",
+    CredentialsProvider({
+      name: "Credentials",
 
-        credentials: {
-          username: {
-            label: "Email",
-            type: "text",
-            placeholder: "Enter your email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-            placeholder: "Enter your password",
-          },
-        }
+      credentials: {
+        username: {
+          label: "Email",
+          type: "text",
+          placeholder: "Enter your email",
+        },
+        password: {
+          label: "Password",
+          type: "password",
+          placeholder: "Enter your password",
+        },
       },
-      async (credentials) => {
-        user = prismaClient.user.findUnique({
-        email: credentials?.username,
-        }),
-        
-        if(!user){
+      async authorize(credentials: any, req: any) {
+        const user = await prisma.user.findUnique({
+          email: credentials?.username,
+        });
+
+        if (!user) {
           return null;
         }
 
-        passwordMatch = await bcrypt.compare( user.password, credentials?.password );
+        const passwordMatch = await bcrypt.compare(
+          user?.password,
+          credentials?.password,
+        );
 
-        if(passwordMatch){
-          token = genrateToken(user.id);
+        if (passwordMatch) {
+          const token = genrateToken(user.id);
           return token;
         }
-      } 
-     )
-  ]
+      },
+    }),
+  ],
 });
