@@ -4,17 +4,22 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:deploy": "prisma migrate deploy"
   },
   "devDependencies": {
     "prisma": "^7.2.0"
   },
   "dependencies": {
-    "@prisma/client": "^6.6.0",
-    "dotenv": "^16.0.3"
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.2.0",
+    "dotenv": "^16.6.1",
+    "pg": "^8.16.3"
   },
   "exports": {
-    ".": "./index.ts"
+    ".": "./src/index.ts"
   },
   "keywords": [],
   "author": "",
