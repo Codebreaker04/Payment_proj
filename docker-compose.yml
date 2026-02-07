@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: paypro-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: payments
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d payments"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paypro-network
+
+  bank-webhook:
+    build:
+      context: .
+      dockerfile: docker/webhook.Dockerfile
+    container_name: paypro-bank-webhook
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://user:password@postgres:5432/payments
+      WEBHOOK_SECRET: bank_webhook_secret_key_12345
+      JWT_SECRET: jwt_secret_key_for_authentication
+      API_KEY: your_api_key_here
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - paypro-network
+
+  user-app:
+    build:
+      context: .
+      dockerfile: docker/user.Dockerfile
+    container_name: paypro-user-app
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://bank-webhook:3001
+      DATABASE_URL: postgresql://user:password@postgres:5432/payments
+      JWT_SECRET: jwt_secret_key_for_authentication
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: your_nextauth_secret_key_here
+    depends_on:
+      - postgres
+      - bank-webhook
+    restart: unless-stopped
+    networks:
+      - paypro-network
+
+  merchant-app:
+    build:
+      context: .
+      dockerfile: docker/merchant.Dockerfile
+    container_name: paypro-merchant-app
+    ports:
+      - "3002:3002"
+    environment:
+      NEXT_PUBLIC_API_URL: http://bank-webhook:3001
+      DATABASE_URL: postgresql://user:password@postgres:5432/payments
+      JWT_SECRET: jwt_secret_key_for_authentication
+      NEXTAUTH_URL: http://localhost:3002
+      NEXTAUTH_SECRET: your_nextauth_secret_key_here_merchant
+    depends_on:
+      - postgres
+      - bank-webhook
+    restart: unless-stopped
+    networks:
+      - paypro-network
+
+volumes:
+  postgres_data:
+
+networks:
+  paypro-network:
+    driver: bridge
+

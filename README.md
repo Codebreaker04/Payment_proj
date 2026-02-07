@@ -133,3 +133,20 @@ Learn more about the power of Turborepo:
 - [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
 - [Configuration Options](https://turborepo.com/docs/reference/configuration)
 - [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+
+---
+
+## 🔧 Recent Fixes
+
+### receiverId Spelling Issue (Fixed)
+
+**Problem**: The codebase had a spelling typo - `recieverId` instead of `receiverId`
+
+**Files Fixed**:
+- ✅ `apps/bank-webhook/src/transaction/dtos/request.ts`
+- ✅ `apps/bank-webhook/src/transaction/transaction.service.ts`
+- ✅ `apps/user-app/lib/api.ts`
+- ✅ `apps/user-app/app/transfer/page.tsx`
+
+**Correct spelling**: `receiverId` (from "receive" - i before e, except after c)
+
