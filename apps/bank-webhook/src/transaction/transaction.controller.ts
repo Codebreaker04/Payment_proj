@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import {
@@ -17,12 +18,14 @@ import {
   CardTransactionRequestDto,
   InternalTransactionRequestDto,
 } from './dtos/request';
+import { WebhookAuthGuard } from '../guards/webhook-auth.guard';
 
 @Controller('webhook')
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
 
   @Post('transaction')
+  @UseGuards(WebhookAuthGuard)
   @HttpCode(HttpStatus.OK)
   async handleTransaction(
     @Body() transactionData: InitiateTransactionRequestDto,
