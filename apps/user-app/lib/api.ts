@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 export interface Transaction {
   id: string;
@@ -33,10 +33,10 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -71,7 +71,7 @@ class ApiClient {
     userId: string,
     limit = 50,
     offset = 0,
-    token?: string
+    token?: string,
   ): Promise<{ success: boolean; transactions: Transaction[]; count: number }> {
     return this.request(
       `/wallet/transactions/${userId}?limit=${limit}&offset=${offset}`,
@@ -79,7 +79,7 @@ class ApiClient {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
         },
-      }
+      },
     );
   }
 
@@ -91,7 +91,7 @@ class ApiClient {
       description?: string;
       idempotencyKey: string;
     },
-    token: string
+    token: string,
   ): Promise<TransactionResponse> {
     return this.request<TransactionResponse>('/webhook/transaction', {
       method: 'POST',
@@ -109,7 +109,7 @@ class ApiClient {
   // Get transaction by ID
   async getTransactionById(
     id: string,
-    token?: string
+    token?: string,
   ): Promise<{ success: boolean; transaction: Transaction }> {
     return this.request(`/webhook/transaction/${id}`, {
       headers: {
