@@ -6,7 +6,7 @@ import { prisma } from '@repo/database';
 
 async function getDashboardData(userId: string) {
   const wallet = await prisma.wallet.findUnique({
-    where: { userId: parseInt(userId) },
+    where: { userId: userId.toString() },
   });
 
   const transactions = await prisma.transaction.findMany({
@@ -18,7 +18,7 @@ async function getDashboardData(userId: string) {
   });
 
   return {
-    balance: wallet?.balance || 0,
+    balance: wallet?.balance ? wallet.balance.toNumber() : 0,
     transactions: transactions.map((tx: any) => ({
       id: tx.id,
       type: tx.type,

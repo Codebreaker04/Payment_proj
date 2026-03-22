@@ -4,6 +4,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: paypro-postgres
+    env_file:
+      - ./packages/database/.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
