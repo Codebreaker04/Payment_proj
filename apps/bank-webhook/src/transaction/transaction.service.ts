@@ -82,18 +82,7 @@ export class TransactionService {
     };
   }
 
-  async getWalletBalance(userId: string) {
-    try {
-      const balance = await this.transactionRepository.checkBalanceByUserId(userId);
-      return {
-        success: true,
-        balance,
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get balance: ${error.message}`);
-      throw error;
-    }
-  }
+  
 
   async getWalletTransactions(userId: string, limit = 50, offset = 0) {
     try {

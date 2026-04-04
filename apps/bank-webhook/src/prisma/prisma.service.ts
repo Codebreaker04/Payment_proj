@@ -5,11 +5,21 @@ import { PrismaPg } from '@prisma/adapter-pg';
 @Global()
 @Injectable()
 export class PrismaService extends PrismaClient {
-  constructor() {
+  private static instance: PrismaService;
+
+  private constructor() {
     const adapter = new PrismaPg({
       connectionString: process.env.DATABASE_URL,
     });
 
     super({ adapter });
   }
+
+  static getPrismaClient = (): PrismaService => {
+    if (!PrismaService.instance) {
+      PrismaService.instance = new PrismaService();
+    }
+
+    return PrismaService.instance;
+  };
 }
