@@ -1,246 +1,157 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Sidebar,
-  SidebarSection,
-  DashboardIcon,
-  TransferIcon,
-  TransactionsIcon,
-  SettingsIcon,
-  PaymentsIcon,
-  UsersIcon,
-} from '@repo/ui/sidebar';
+import { useSession } from 'next-auth/react';
+import { Sidebar } from '@repo/ui/sidebar';
+import { api, UserSettings } from '@/lib/api';
+import { getSidebarSections } from '@/lib/sidebar';
 
 export default function SettingsPage() {
   const pathname = usePathname();
   const router = useRouter();
-  const [notifications, setNotifications] = useState(true);
-  const [twoFactor, setTwoFactor] = useState(false);
+  const { data: session } = useSession();
 
-  const sidebarSections: SidebarSection[] = [
-    {
-      id: 'menu',
-      title: 'MENU',
-      items: [
-        {
-          id: 'dashboard',
-          label: 'Dashboard',
-          icon: <DashboardIcon />,
-          href: '/dashboard',
-        },
-        {
-          id: 'transactions',
-          label: 'Transactions',
-          icon: <TransactionsIcon />,
-          href: '/transactions',
-          badge: 8,
-        },
-        {
-          id: 'transfer',
-          label: 'Transfer Money',
-          icon: <TransferIcon />,
-          href: '/transfer',
-        },
-        {
-          id: 'payments',
-          label: 'Payment History',
-          icon: <PaymentsIcon />,
-          href: '/payments',
-        },
-      ],
-    },
-    {
-      id: 'account',
-      title: 'ACCOUNT',
-      items: [
-        {
-          id: 'profile',
-          label: 'Account',
-          icon: <UsersIcon />,
-          href: '/account',
-        },
-      ],
-    },
-    {
-      id: 'support',
-      title: 'SUPPORT',
-      items: [
-        {
-          id: 'settings',
-          label: 'Setting',
-          icon: <SettingsIcon />,
-          href: '/settings',
-        },
-      ],
-    },
-  ];
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
-  const handleNavigation = (href: string) => {
-    router.push(href);
+  const sidebarSections = useMemo(() => getSidebarSections(), []);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    void (async () => {
+      try {
+        setLoading(true);
+        const response = await api.getSettings(userId);
+        setSettings(response.settings);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load settings');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [session?.user?.id]);
+
+  const updateAndPersist = async (patch: Partial<UserSettings>) => {
+    const userId = session?.user?.id;
+    if (!userId || !settings) return;
+
+    const nextSettings = { ...settings, ...patch };
+    setSettings(nextSettings);
+
+    try {
+      setSaving(true);
+      setError('');
+      setMessage('');
+      const response = await api.updateSettings(userId, patch);
+      setSettings(response.settings);
+      setMessage('Settings updated.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading || !settings) {
+    return <div className='p-8 text-gray-600'>Loading settings...</div>;
+  }
 
   return (
     <div className='flex min-h-screen bg-gray-50'>
       <Sidebar
         sections={sidebarSections}
         currentPath={pathname}
-        onNavigate={handleNavigation}
+        onNavigate={href => router.push(href)}
         showSearch={true}
       />
 
-      <main className='flex-1'>
-        <div className='p-8'>
-          <h1 className='text-3xl font-bold mb-8 text-gray-900'>Settings</h1>
+      <main className='flex-1 p-8'>
+        <h1 className='text-3xl font-bold mb-6 text-gray-900'>Settings</h1>
 
-          {/* Security Settings */}
-          <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6'>
-            <h2 className='text-xl font-semibold text-gray-900 mb-6'>
-              Security
-            </h2>
+        <section className='bg-white rounded-lg border border-gray-200 p-6 mb-6'>
+          <h2 className='text-xl font-semibold mb-4'>Security</h2>
+          <label className='flex items-center justify-between'>
+            <span>Two-Factor Authentication</span>
+            <input
+              type='checkbox'
+              checked={settings.twoFactorEnabled}
+              onChange={e =>
+                void updateAndPersist({ twoFactorEnabled: e.target.checked })
+              }
+              disabled={saving}
+            />
+          </label>
+        </section>
 
-            <div className='space-y-6'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h3 className='text-sm font-medium text-gray-900'>
-                    Two-Factor Authentication
-                  </h3>
-                  <p className='text-sm text-gray-600'>
-                    Add an extra layer of security to your account
-                  </p>
-                </div>
-                <button
-                  onClick={() => setTwoFactor(!twoFactor)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    twoFactor ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}>
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      twoFactor ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
+        <section className='bg-white rounded-lg border border-gray-200 p-6 mb-6'>
+          <h2 className='text-xl font-semibold mb-4'>Notifications</h2>
+          <div className='space-y-3'>
+            <label className='flex items-center justify-between'>
+              <span>Email Notifications</span>
+              <input
+                type='checkbox'
+                checked={settings.emailNotifications}
+                onChange={e =>
+                  void updateAndPersist({ emailNotifications: e.target.checked })
+                }
+                disabled={saving}
+              />
+            </label>
+            <label className='flex items-center justify-between'>
+              <span>Transaction Alerts</span>
+              <input
+                type='checkbox'
+                checked={settings.transactionAlerts}
+                onChange={e =>
+                  void updateAndPersist({ transactionAlerts: e.target.checked })
+                }
+                disabled={saving}
+              />
+            </label>
+          </div>
+        </section>
 
-              <div className='pt-6 border-t border-gray-200'>
-                <h3 className='text-sm font-medium text-gray-900 mb-4'>
-                  Change Password
-                </h3>
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>
-                      Current Password
-                    </label>
-                    <input
-                      type='password'
-                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>
-                      New Password
-                    </label>
-                    <input
-                      type='password'
-                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>
-                      Confirm New Password
-                    </label>
-                    <input
-                      type='password'
-                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    />
-                  </div>
-                  <button className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'>
-                    Update Password
-                  </button>
-                </div>
-              </div>
+        <section className='bg-white rounded-lg border border-gray-200 p-6'>
+          <h2 className='text-xl font-semibold mb-4'>Preferences</h2>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div>
+              <label className='block text-sm font-medium mb-2'>Language</label>
+              <select
+                value={settings.language}
+                onChange={e => void updateAndPersist({ language: e.target.value })}
+                disabled={saving}
+                className='w-full px-3 py-2 border border-gray-300 rounded-lg'>
+                <option value='en'>English</option>
+                <option value='es'>Spanish</option>
+                <option value='fr'>French</option>
+                <option value='de'>German</option>
+              </select>
+            </div>
+            <div>
+              <label className='block text-sm font-medium mb-2'>Currency</label>
+              <select
+                value={settings.currency}
+                onChange={e => void updateAndPersist({ currency: e.target.value })}
+                disabled={saving}
+                className='w-full px-3 py-2 border border-gray-300 rounded-lg'>
+                <option value='USD'>USD - US Dollar</option>
+                <option value='EUR'>EUR - Euro</option>
+                <option value='GBP'>GBP - British Pound</option>
+                <option value='JPY'>JPY - Japanese Yen</option>
+                <option value='INR'>INR - Indian Rupee</option>
+              </select>
             </div>
           </div>
+        </section>
 
-          {/* Notification Settings */}
-          <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6'>
-            <h2 className='text-xl font-semibold text-gray-900 mb-6'>
-              Notifications
-            </h2>
-
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h3 className='text-sm font-medium text-gray-900'>
-                    Email Notifications
-                  </h3>
-                  <p className='text-sm text-gray-600'>
-                    Receive email about your account activity
-                  </p>
-                </div>
-                <button
-                  onClick={() => setNotifications(!notifications)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    notifications ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}>
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      notifications ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h3 className='text-sm font-medium text-gray-900'>
-                    Transaction Alerts
-                  </h3>
-                  <p className='text-sm text-gray-600'>
-                    Get notified for every transaction
-                  </p>
-                </div>
-                <button className='relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600'>
-                  <span className='inline-block h-4 w-4 transform rounded-full bg-white translate-x-6' />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Preferences */}
-          <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6'>
-            <h2 className='text-xl font-semibold text-gray-900 mb-6'>
-              Preferences
-            </h2>
-
-            <div className='space-y-4'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  Language
-                </label>
-                <select className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'>
-                  <option>English</option>
-                  <option>Spanish</option>
-                  <option>French</option>
-                  <option>German</option>
-                </select>
-              </div>
-
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  Currency
-                </label>
-                <select className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'>
-                  <option>USD - US Dollar</option>
-                  <option>EUR - Euro</option>
-                  <option>GBP - British Pound</option>
-                  <option>JPY - Japanese Yen</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
+        {error && <p className='mt-4 text-sm text-red-600'>{error}</p>}
+        {message && <p className='mt-4 text-sm text-green-600'>{message}</p>}
       </main>
     </div>
   );

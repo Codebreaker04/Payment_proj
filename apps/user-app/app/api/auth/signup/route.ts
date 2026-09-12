@@ -1,79 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@repo/database';
-import bcrypt from 'bcrypt';
+import { SignupRequestSchema, SignupResponseSchema } from '@repo/contracts';
+
+const API_BASE_URL =
+  process.env.API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'http://localhost:3002';
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    const body = await req.json();
 
-    // Validation
-    if (!email || !password || !name) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 },
-      );
+    // Validate against the shared contract
+    const request = SignupRequestSchema.safeParse(body);
+    if (!request.success) {
+      const message = request.error.issues[0]?.message ?? 'Invalid input';
+      return NextResponse.json({ success: false, message }, { status: 400 });
     }
 
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters' },
-        { status: 400 },
-      );
-    }
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request.data),
+      cache: 'no-store',
     });
 
-    if (existingUser) {
+    const data = (await response.json().catch(() => null)) as unknown;
+
+    // One envelope for success and failure — parse it once.
+    const result = SignupResponseSchema.safeParse(data);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 },
+        {
+          success: false,
+          message: response.ok
+            ? 'Authentication service returned an invalid response'
+            : 'Unable to reach the authentication service',
+        },
+        { status: response.ok ? 502 : 503 },
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user and wallet in a transaction
-    const user = await prisma.$transaction(async tx => {
-      const newUser = await tx.user.create({
-        data: {
-          email,
-          name,
-          password: hashedPassword,
-        },
-      });
-
-      // Create wallet for the user
-      await tx.wallet.create({
-        data: {
-          userId: newUser.id,
-          balance: 0,
-          currency: 'USD',
-        },
-      });
-
-      return newUser;
-    });
+    if (!result.data.success) {
+      return NextResponse.json(
+        { success: false, message: result.data.message },
+        { status: response.status },
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
+        message: result.data.message,
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          id: result.data.user.id,
+          email: result.data.user.email,
+          name: result.data.user.name,
         },
       },
       { status: 201 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to create account';
     console.error('Signup error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create account' },
-      { status: 500 },
-    );
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }

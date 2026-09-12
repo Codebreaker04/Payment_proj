@@ -11,12 +11,11 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@repo/database": "*",
     "@repo/recoil": "*",
     "@repo/ui": "*",
+    "@repo/contracts": "*",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/jsonwebtoken": "^9.0.10",
-    "bcrypt": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "next": "16.0.10",
     "next-auth": "^4.24.13",

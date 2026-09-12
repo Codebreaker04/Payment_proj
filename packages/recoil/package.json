@@ -9,10 +9,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "private": true,
   "dependencies": {
     "recoil": "^0.7.7"
   }
 }
-

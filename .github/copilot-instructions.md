@@ -30,6 +30,7 @@ packages/
 ## Build & Development Commands
 
 ### Monorepo (Root)
+
 ```bash
 npm run build          # Build all apps/packages
 npm run dev            # Start all services in dev mode
@@ -39,6 +40,7 @@ npm run check-types    # TypeScript type checking
 ```
 
 ### Bank Webhook (NestJS)
+
 ```bash
 npm run dev            # Watch mode (PORT=3002)
 npm run build          # Compile TypeScript
@@ -50,6 +52,7 @@ npm run test:e2e       # E2E tests
 ```
 
 ### User App (Next.js)
+
 ```bash
 npm run dev            # Dev server (port 3000)
 npm run build          # Production build
@@ -57,6 +60,7 @@ npm run check-types    # Type generation + tsc
 ```
 
 ### Database Package
+
 ```bash
 npm run db:generate    # Generate Prisma Client
 npm run db:migrate     # Run migrations (dev)
@@ -65,6 +69,7 @@ npm run db:studio      # Open Prisma Studio
 ```
 
 ### Docker
+
 ```bash
 docker-compose up -d   # Start all services
 docker-compose logs -f # Follow logs
@@ -75,6 +80,7 @@ docker-compose down    # Stop services
 ## Architecture
 
 ### High-Level Flow
+
 ```
 User Browser (localhost:3000)
     ↓ HTTP
@@ -93,6 +99,7 @@ PostgreSQL Database (port 5432)
 - `Wallet ↔ Transaction`: Hard FK (both remain in same service)
 
 This allows splitting into separate services:
+
 - **User Service**: Authentication, user profiles
 - **Wallet Service**: Wallets + transactions
 
@@ -114,6 +121,7 @@ apps/bank-webhook/src/
 ```
 
 **Patterns**:
+
 - Dependency Injection via NestJS modules
 - Repository pattern for data access
 - DTOs for request/response validation
@@ -143,6 +151,7 @@ apps/user-app/
 **File**: `/packages/database/prisma/schema.prisma`
 
 ### Key Conventions
+
 - **Field Naming**: camelCase (`userId`, `referenceId`)
 - **IDs**: UUID v4 with `@default(uuid())`
 - **Timestamps**: `createdAt`, `updatedAt`, `deletedAt` (soft deletes)
@@ -151,19 +160,20 @@ apps/user-app/
 - **Indexes**: On foreign keys and frequently queried fields
 
 ### Schema Example
+
 ```prisma
 model Wallet {
   id      String  @id @default(uuid())
   userId  String  @unique  // NO FK - microservices-ready
   balance Decimal @db.Decimal(10, 2)
-  
+
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
-  
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-  
+
   @@index([userId])
   @@map("wallets")
 }
@@ -172,6 +182,7 @@ model Wallet {
 ### Recent Schema Fixes
 
 ⚠️ **Important Spelling Corrections**:
+
 1. ✅ `refrenceId` → `referenceId` (migration: `20260201120155_fix_reference_id_typo`)
 2. ✅ `recieverId` → `receiverId` (fixed across all files)
 
@@ -180,6 +191,7 @@ When referencing these fields, use the **correct** spelling.
 ## Coding Conventions
 
 ### Naming
+
 - **Files**: camelCase for utilities, PascalCase for components
 - **Variables**: camelCase
 - **Constants**: UPPER_SNAKE_CASE
@@ -187,12 +199,14 @@ When referencing these fields, use the **correct** spelling.
 - **Database columns**: camelCase (follow Prisma schema)
 
 ### API Patterns
+
 - RESTful endpoints with HTTP verbs
 - Route pattern: `/resource/:id`
 - Error responses: Use NestJS exceptions (`NotFoundException`, `BadRequestException`)
 - Authentication: JWT tokens via NextAuth
 
 ### Type Safety
+
 - Full TypeScript end-to-end
 - Frontend API client (`lib/api.ts`) with typed responses
 - Prisma generates types from schema
@@ -205,6 +219,7 @@ When referencing these fields, use the **correct** spelling.
 **File**: `/apps/user-app/lib/auth.ts`
 
 **Critical Security Fix Applied** (see `/AUTH_FIX_GUIDE.md`):
+
 - ✅ `bcrypt.compare()` must use `await` (security vulnerability if missing)
 - ✅ Return user object from `authorize()`, not token
 - ✅ Validate credentials before processing
@@ -222,6 +237,7 @@ verifyToken(token: string): { userId }   // Validate JWT
 ### Environment Variables
 
 **User App**:
+
 ```env
 DATABASE_URL=postgresql://admin:admin@localhost:5432/payments
 NEXTAUTH_URL=http://localhost:3000
@@ -230,6 +246,7 @@ JWT_SECRET=<generate with: openssl rand -base64 32>
 ```
 
 **Bank Webhook**:
+
 ```env
 PORT=3002
 DATABASE_URL=postgresql://admin:admin@localhost:5432/payments
@@ -249,6 +266,7 @@ ALLOWED_WEBHOOK_IPS=1.2.3.4
 ## Common Tasks
 
 ### Running Tests
+
 ```bash
 # NestJS (bank-webhook)
 cd apps/bank-webhook
@@ -261,6 +279,7 @@ npm run test:cov               # With coverage
 ```
 
 ### Database Migrations
+
 ```bash
 cd packages/database
 
@@ -273,6 +292,7 @@ npm run db:deploy              # Apply pending migrations
 ```
 
 ### Adding New Dependencies
+
 ```bash
 # Root-level (shared dependencies)
 npm install <package> -w <workspace-name>
@@ -287,6 +307,7 @@ npm install -D <package>
 ```
 
 ### Running Single Service
+
 ```bash
 # Filter by workspace name
 npm run dev --filter=user-app
@@ -298,18 +319,19 @@ npx turbo dev --filter=user-app
 
 ## Important Documentation
 
-| File | Purpose |
-|------|---------|
-| `IMPLEMENTATION_SUMMARY.md` | Complete feature checklist, architecture diagrams, API endpoints |
-| `AUTH_FIX_GUIDE.md` | Critical security fixes in NextAuth (bcrypt, JWT) |
-| `PRODUCTION_SECURITY.md` | Security implementation guide, pre-deployment checklist |
-| `MICROSERVICES_SCHEMA_GUIDE.md` | How to split into microservices, migration strategy |
-| `DOCKER_FIX_SUMMARY.md` | Docker configuration and fixes |
-| `QUICK_START.md` | 30-second startup guide |
+| File                                 | Purpose                                                          |
+| ------------------------------------ | ---------------------------------------------------------------- |
+| `docs/IMPLEMENTATION_SUMMARY.md`     | Complete feature checklist, architecture diagrams, API endpoints |
+| `docs/AUTH_FIX_GUIDE.md`             | Critical security fixes in NextAuth (bcrypt, JWT)                |
+| `docs/PRODUCTION_SECURITY.md`        | Security implementation guide, pre-deployment checklist          |
+| `docs/MICROSERVICES_SCHEMA_GUIDE.md` | How to split into microservices, migration strategy              |
+| `docs/DOCKER_FIX_SUMMARY.md`         | Docker configuration and fixes                                   |
+| `docs/QUICK_START.md`                | 30-second startup guide                                          |
 
 ## Known Issues & Fixes
 
 ### Fixed Issues ✅
+
 1. **bcrypt.compare missing await** - Security vulnerability (now fixed)
 2. **receiverId spelling** - Changed from `recieverId` to `receiverId`
 3. **referenceId spelling** - Changed from `refrenceId` to `referenceId`
@@ -317,6 +339,7 @@ npx turbo dev --filter=user-app
 5. **Docker port conflicts** - Configured distinct ports (3000, 3001, 3002, 5432)
 
 ### Pending Improvements
+
 - [ ] Unit test coverage (Jest setup exists)
 - [ ] Rate limiting (@nestjs/throttler)
 - [ ] API documentation (Swagger/OpenAPI)
@@ -329,6 +352,7 @@ npx turbo dev --filter=user-app
 **Base URL**: `http://localhost:3001` (or 3002 in dev)
 
 ### Endpoints
+
 ```
 GET  /wallet/balance/:userId           # Get wallet balance
 GET  /wallet/transactions/:userId      # Get transaction history
@@ -338,6 +362,7 @@ POST /webhook/verify                   # Verify webhook signature
 ```
 
 ### Example Request
+
 ```bash
 # Get balance
 curl http://localhost:3001/wallet/balance/user-123
@@ -355,22 +380,24 @@ curl -X POST http://localhost:3001/webhook/transaction \
 
 ## Port Configuration
 
-| Service | Development | Production | Docker |
-|---------|------------|-----------|--------|
-| User App | 3000 | 3000 | 3000 |
-| Merchant App | 3001 | 3001 | 3001 |
-| Bank Webhook | 3002 | 3001 | 3002 |
-| PostgreSQL | 5432 | 5432 | 5432 |
+| Service      | Development | Production | Docker |
+| ------------ | ----------- | ---------- | ------ |
+| User App     | 3000        | 3000       | 3000   |
+| Merchant App | 3001        | 3001       | 3001   |
+| Bank Webhook | 3002        | 3001       | 3002   |
+| PostgreSQL   | 5432        | 5432       | 5432   |
 
 ## Troubleshooting
 
 ### Prisma Client Out of Sync
+
 ```bash
 cd packages/database
 npm run db:generate
 ```
 
 ### Docker Issues
+
 ```bash
 # Full cleanup
 docker-compose down -v
@@ -381,6 +408,7 @@ docker-compose up --build
 ```
 
 ### Port Already in Use
+
 ```bash
 # Find process using port 3000
 lsof -i :3000
@@ -390,6 +418,7 @@ kill -9 <PID>
 ```
 
 ### NextAuth Session Issues
+
 - Verify `NEXTAUTH_SECRET` is set in `.env`
 - Check `NEXTAUTH_URL` matches your domain
 - Clear cookies and restart Next.js dev server
@@ -397,6 +426,7 @@ kill -9 <PID>
 ## Project Status
 
 ✅ **Implemented**:
+
 - Database schema with migrations
 - Backend API (NestJS) with all CRUD operations
 - Frontend (Next.js) with dashboard and transfer pages
@@ -406,10 +436,12 @@ kill -9 <PID>
 - Full TypeScript type safety
 
 ⚠️ **In Progress**:
+
 - Unit test coverage
 - API documentation
 
 ❌ **Not Started**:
+
 - CI/CD pipeline
 - Error monitoring
 - Rate limiting

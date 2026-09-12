@@ -2,31 +2,31 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { DashboardClient } from './dashboard-client';
-import { prisma } from '@repo/database';
+import { api } from '@/lib/api';
 
 async function getDashboardData(userId: string) {
-  const wallet = await prisma.wallet.findUnique({
-    where: { userId: userId.toString() },
-  });
+  try {
+    const [balanceResponse, transactionsResponse] = await Promise.all([
+      api.getBalance(userId),
+      api.getTransactions(userId, 10, 0),
+    ]);
 
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      OR: [{ senderId: wallet?.id }, { receiverId: wallet?.id }],
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 10,
-  });
-
-  return {
-    balance: wallet?.balance ? wallet.balance.toNumber() : 0,
-    transactions: transactions.map((tx: any) => ({
-      id: tx.id,
-      type: tx.type,
-      amount: tx.amount.toNumber(),
-      status: tx.status,
-      date: tx.createdAt.toISOString().split('T')[0],
-    })),
-  };
+    return {
+      balance: balanceResponse.balance,
+      transactions: transactionsResponse.transactions.map(tx => ({
+        id: tx.id,
+        type: tx.type,
+        amount: tx.amount,
+        status: tx.status,
+        date: tx.createdAt.split('T')[0] ?? tx.createdAt,
+      })),
+    };
+  } catch {
+    return {
+      balance: 0,
+      transactions: [],
+    };
+  }
 }
 
 export default async function DashboardPage() {

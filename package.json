@@ -10,7 +10,6 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "@tailwindcss/oxide-linux-x64-gnu": "^4.2.2",
     "@types/bcrypt": "^6.0.0",
     "prettier": "^3.6.2",
     "turbo": "^2.8.20",
@@ -35,7 +34,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tree-sitter-cli": "^0.25.10",
-    "upgrade": "^1.1.0"
+    "upgrade": "^1.1.0",
+    "zod": "^4.6.2"
   },
   "optionalDependencies": {
     "@parcel/watcher": "^2.5.6",

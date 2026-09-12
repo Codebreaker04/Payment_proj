@@ -18,117 +18,138 @@ export interface WalletBalance {
   balance: number;
 }
 
+export interface TransactionListResponse {
+  success: boolean;
+  count: number;
+  transactions: Transaction[];
+}
+
 export interface TransactionResponse {
   success: boolean;
   message: string;
-  transaction?: any;
+  transaction: Transaction;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  createdAt: string;
+}
+
+export interface UserSettings {
+  userId: string;
+  language: string;
+  currency: string;
+  emailNotifications: boolean;
+  transactionAlerts: boolean;
+  twoFactorEnabled: boolean;
 }
 
 class ApiClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options?: RequestInit,
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-
-    const config: RequestInit = {
+    const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
       },
-    };
-
-    const response = await fetch(url, config);
+      cache: 'no-store',
+    });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: response.statusText,
-      }));
-      throw new Error(error.message || 'API request failed');
+      const error = (await response.json().catch(() => null)) as
+        | { message?: string; error?: string }
+        | null;
+      throw new Error(
+        error?.message ?? error?.error ?? `${response.status} ${response.statusText}`,
+      );
     }
 
-    return response.json();
+    return (await response.json()) as T;
   }
 
-  // Get wallet balance
-  async getBalance(userId: string, token?: string): Promise<WalletBalance> {
-    return this.request<WalletBalance>(`/wallet/balance/${userId}`, {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : '',
-      },
-    });
+  async getBalance(userId: string): Promise<WalletBalance> {
+    return this.request<WalletBalance>(`/wallet/balance/${userId}`);
   }
 
-  // Get transaction history
   async getTransactions(
     userId: string,
     limit = 50,
     offset = 0,
-    token?: string,
-  ): Promise<{ success: boolean; transactions: Transaction[]; count: number }> {
-    return this.request(
+  ): Promise<TransactionListResponse> {
+    return this.request<TransactionListResponse>(
       `/wallet/transactions/${userId}?limit=${limit}&offset=${offset}`,
+    );
+  }
+
+  async sendP2PTransaction(data: {
+    senderUserId: string;
+    receiverUserId: string;
+    amount: number;
+    description?: string;
+    idempotencyKey: string;
+  }): Promise<TransactionResponse> {
+    return this.request<TransactionResponse>('/transaction/transfer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getTransactionById(
+    id: string,
+  ): Promise<{ success: boolean; transaction: Transaction }> {
+    return this.request<{ success: boolean; transaction: Transaction }>(
+      `/webhook/transaction/${id}`,
+    );
+  }
+
+  async getProfile(userId: string): Promise<{ success: boolean; profile: UserProfile }> {
+    return this.request<{ success: boolean; profile: UserProfile }>(
+      `/user/profile/${userId}`,
+    );
+  }
+
+  async updateProfile(
+    userId: string,
+    data: { name?: string; email?: string; phone?: string },
+  ): Promise<{ success: boolean; profile: UserProfile }> {
+    return this.request<{ success: boolean; profile: UserProfile }>(
+      `/user/profile/${userId}`,
       {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-        },
+        method: 'PUT',
+        body: JSON.stringify(data),
       },
     );
   }
 
-  // Send P2P transaction
-  async sendP2PTransaction(
-    data: {
-      receiverId: string;
-      amount: number;
-      description?: string;
-      idempotencyKey: string;
-    },
-    token: string,
-  ): Promise<TransactionResponse> {
-    return this.request<TransactionResponse>('/webhook/transaction', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        ...data,
-        paymentMethod: 'P2P',
-        currency: 'USD',
-      }),
-    });
+  async getSettings(
+    userId: string,
+  ): Promise<{ success: boolean; settings: UserSettings }> {
+    return this.request<{ success: boolean; settings: UserSettings }>(
+      `/user/settings/${userId}`,
+    );
   }
 
-  // Get transaction by ID
-  async getTransactionById(
-    id: string,
-    token?: string,
-  ): Promise<{ success: boolean; transaction: Transaction }> {
-    return this.request(`/webhook/transaction/${id}`, {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : '',
+  async updateSettings(
+    userId: string,
+    data: Partial<UserSettings>,
+  ): Promise<{ success: boolean; settings: UserSettings }> {
+    return this.request<{ success: boolean; settings: UserSettings }>(
+      `/user/settings/${userId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
       },
-    });
-  }
-
-  // Register new user
-  async register(data: {
-    email: string;
-    password: string;
-    name?: string;
-    phone?: string;
-  }): Promise<{ success: boolean; user: any }> {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    );
   }
 }
 

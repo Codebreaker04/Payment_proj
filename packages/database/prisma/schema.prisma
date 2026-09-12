@@ -31,6 +31,23 @@ model User {
   @@map("users")
 }
 
+model UserSettings {
+  id                 String  @id @default(uuid())
+  userId             String  @unique
+  language           String  @default("en")
+  currency           String  @default("USD")
+  emailNotifications Boolean @default(true)
+  transactionAlerts  Boolean @default(true)
+  twoFactorEnabled   Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@map("user_settings")
+}
+
 // WALLET MODEL - Can be moved to separate Wallet Service
 model Wallet {
   id      String  @id @default(uuid())

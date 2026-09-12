@@ -1,85 +1,74 @@
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcrypt";
-import { prisma } from "@repo/database";
+import { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { LoginRequestSchema, LoginResponseSchema } from '@repo/contracts';
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      name: string | null;
-    };
-  }
-
-  interface User {
-    id: string;
-    email: string;
-    name: string | null;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    email: string;
-    name: string | null;
-  }
-}
+// Server-side (NextAuth authorize runs in the Node runtime, inside the
+// container): API_URL points at the backend over the docker network.
+// NEXT_PUBLIC_* fallbacks kept for non-docker/dev runs.
+const API_BASE_URL =
+  process.env.API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'http://localhost:3002';
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
         email: {
-          label: "Email",
-          type: "email",
-          placeholder: "your@email.com",
+          label: 'Email',
+          type: 'email',
+          placeholder: 'name@company.com',
         },
         password: {
-          label: "Password",
-          type: "password",
+          label: 'Password',
+          type: 'password',
         },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Please enter email and password");
+        if (!credentials) {
+          throw new Error('Please enter email and password');
         }
 
-        try {
-          const user = await prisma.user.findUnique({
-            where: {
-              email: credentials.email,
-            },
-          });
+        // Validate the raw credentials against the shared contract
+        // before hitting the backend.
+        const request = LoginRequestSchema.safeParse(credentials);
+        if (!request.success) {
+          throw new Error('Please enter a valid email and password');
+        }
 
-          if (!user) {
-            throw new Error("No user found with this email");
-          }
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request.data),
+          cache: 'no-store',
+        });
 
-          if (!user.password) {
-            throw new Error("Invalid authentication method");
-          }
+        const body = (await response.json().catch(() => null)) as unknown;
 
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
+        // One envelope for success and failure — parse it once.
+        const result = LoginResponseSchema.safeParse(body);
+        if (!result.success) {
+          throw new Error(
+            response.ok
+              ? 'Authentication service returned an invalid response'
+              : 'Unable to reach the authentication service',
           );
-
-          if (!isPasswordValid) {
-            throw new Error("Invalid password");
-          }
-
-          return {
-            id: String(user.id),
-            email: user.email,
-            name: user.name,
-          };
-        } catch (error) {
-          console.error("Authorization error:", error);
-          throw error;
         }
+
+        if (!result.data.success) {
+          throw new Error(result.data.message || 'Invalid email or password');
+        }
+
+        const { accessToken, user } = result.data;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          accessToken,
+        };
       },
     }),
   ],
@@ -87,26 +76,22 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
+        token.accessToken = user.accessToken;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-      }
+      session.user.id = token.id!;
+      session.accessToken = token.accessToken;
       return session;
     },
   },
   pages: {
-    signIn: "/auth/signin",
-    error: "/auth/error",
+    signIn: '/auth/signin',
+    error: '/auth/error',
   },
   session: {
-    strategy: "jwt",
+    strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,

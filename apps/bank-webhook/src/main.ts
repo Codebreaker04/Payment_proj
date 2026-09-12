@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import { GlobalErrorFilter } from './filters/global-error.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,18 +15,13 @@ async function bootstrap() {
   const isProduction = process.env.NODE_ENV === 'production';
   app.enableCors({
     origin: isProduction ? (process.env.ALLOWED_ORIGINS || '').split(',') : '*',
-    methods: ['POST', 'GET'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
     credentials: true,
   });
 
-  // Validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  // Global error filter — every failure returns { success: false, message }
+  // matching the contract response DTOs.
+  app.useGlobalFilters(new GlobalErrorFilter());
 
   const port = process.env.PORT ?? 3002;
   await app.listen(port);
@@ -40,4 +36,4 @@ async function bootstrap() {
     logger.warn('⚠️  Development mode - Secrets visible in logs');
   }
 }
-bootstrap();
+void bootstrap();

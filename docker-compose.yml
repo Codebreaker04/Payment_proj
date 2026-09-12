@@ -1,8 +1,8 @@
-version: "3.8"
+version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     env_file:
       - ./packages/database/.env
     environment:
@@ -10,11 +10,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,10 +26,11 @@ services:
       context: .
       dockerfile: docker/webhook.Dockerfile
     ports:
-      - "3002:3002"
+      - '3002:3002'
     environment:
       PORT: 3002
-      DATABASE_URL: postgresql://user:password@postgres:5432/payments
+      # In-network host: 'postgres' (compose service name), not localhost
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/payments
       WEBHOOK_SECRET: bank_webhook_secret_key_12345
       JWT_SECRET: jwt_secret_key_for_authentication
       API_KEY: your_api_key_here
@@ -45,13 +46,17 @@ services:
       context: .
       dockerfile: docker/user.Dockerfile
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
-      NEXT_PUBLIC_API_URL: http://bank-webhook:3002
-      DATABASE_URL: postgresql://user:password@postgres:5432/payments
+      # Browser-facing backend URL (client components, inlined at build)
+      NEXT_PUBLIC_API_URL: http://localhost:3002
+      # Server-side backend URL (NextAuth authorize / signup route, docker network)
+      API_URL: http://bank-webhook:3002
+      # In-network host: 'postgres', not localhost; 'admin'/'payments' from .env
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/payments
       JWT_SECRET: jwt_secret_key_for_authentication
       NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: your_nextauth_secret_key_here
+      NEXTAUTH_SECRET: 9599106c52ef3c8fdf5c161db0160a8a28b87380d4a00c2994e9e4ddcea3018f
     depends_on:
       - postgres
       - bank-webhook
@@ -64,13 +69,14 @@ services:
       context: .
       dockerfile: docker/merchant.Dockerfile
     ports:
-      - "3003:3003"
+      - '3003:3003'
     environment:
-      NEXT_PUBLIC_API_URL: http://bank-webhook:3002
-      DATABASE_URL: postgresql://user:password@postgres:5432/payments
+      NEXT_PUBLIC_API_URL: http://localhost:3002
+      API_URL: http://bank-webhook:3002
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/payments
       JWT_SECRET: jwt_secret_key_for_authentication
-      NEXTAUTH_URL: http://localhost:3002
-      NEXTAUTH_SECRET: your_nextauth_secret_key_here_merchant
+      NEXTAUTH_URL: http://localhost:3003
+      NEXTAUTH_SECRET: 7b03c323f56431aba6c12a93b42b43bcb177176aba14225a37acd796adb6281e
     depends_on:
       - postgres
       - bank-webhook
@@ -84,3 +90,4 @@ volumes:
 networks:
   paypro-network:
     driver: bridge
+
