@@ -54,31 +54,43 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit,
+    token?: string,
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options?.headers,
       },
       cache: 'no-store',
     });
 
     if (!response.ok) {
-      const error = (await response.json().catch(() => null)) as
-        | { message?: string; error?: string }
-        | null;
+      const error = (await response.json().catch(() => null)) as {
+        message?: string;
+        error?: string;
+      } | null;
       throw new Error(
-        error?.message ?? error?.error ?? `${response.status} ${response.statusText}`,
+        error?.message ??
+          error?.error ??
+          `${response.status} ${response.statusText}`,
       );
     }
 
     return (await response.json()) as T;
   }
 
-  async getBalance(userId: string): Promise<WalletBalance> {
-    return this.request<WalletBalance>(`/wallet/balance/${userId}`);
+  async getBalance(userId: string, token?: string): Promise<WalletBalance> {
+    return this.request<WalletBalance>(
+      `/wallet/balance/${userId}`,
+      undefined,
+      token,
+    );
   }
 
   async getTransactions(
@@ -112,7 +124,9 @@ class ApiClient {
     );
   }
 
-  async getProfile(userId: string): Promise<{ success: boolean; profile: UserProfile }> {
+  async getProfile(
+    userId: string,
+  ): Promise<{ success: boolean; profile: UserProfile }> {
     return this.request<{ success: boolean; profile: UserProfile }>(
       `/user/profile/${userId}`,
     );
@@ -154,3 +168,4 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+
