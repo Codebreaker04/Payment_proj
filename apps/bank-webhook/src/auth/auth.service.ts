@@ -63,7 +63,12 @@ export class AuthenticationService implements IAuthService {
           email: user.email,
           name: user.name,
         },
-        accessToken: this.jwtService.signToken(user.id, user.email, user.name),
+        accessToken: this.jwtService.signToken(
+          user.id,
+          user.email,
+          user.name,
+          user.tokenVersion,
+        ),
       };
     } catch (error) {
       if (
@@ -86,6 +91,7 @@ export class AuthenticationService implements IAuthService {
         email: true,
         name: true,
         password: true,
+        tokenVersion: true,
       },
     });
 
@@ -105,6 +111,7 @@ export class AuthenticationService implements IAuthService {
       user.id,
       user.email,
       user.name,
+      user.tokenVersion
     );
 
     return {
@@ -117,5 +124,14 @@ export class AuthenticationService implements IAuthService {
         name: user.name,
       },
     };
+  }
+
+  async logout(userId: string): Promise<void> {
+    // Bumping tokenVersion instantly invalidates every token issued for this
+    // user before this moment — including the one that authorized this call.
+    await this.userRepository.update(
+      { id: userId },
+      { tokenVersion: { increment: 1 } },
+    );
   }
 }

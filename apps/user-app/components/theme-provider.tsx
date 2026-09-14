@@ -10,8 +10,8 @@ function ThemeProvider({
   return (
     <NextThemesProvider
       attribute='class'
-      defaultTheme='system'
-      enableSystem
+      defaultTheme='light'
+      enableSystem={false}
       disableTransitionOnChange
       {...props}>
       <ThemeHotkey />
@@ -46,7 +46,7 @@ function ThemeHotkey() {
         return;
       }
 
-      if (event.key.toLowerCase() !== 'd') {
+      if (typeof event.key !== 'string' || event.key.toLowerCase() !== 'd') {
         return;
       }
 

@@ -50,7 +50,6 @@ export default function PaymentsPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold mb-6 text-gray-900">Payment History</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-gray-200 p-4">

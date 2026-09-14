@@ -1,9 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
+import { API_BASE_URL } from '@/lib/api';
 import {
   ArrowLeftRight,
+  ChevronsUpDownIcon,
   HandCoins,
   History,
   LayoutDashboard,
@@ -20,12 +24,36 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
 } from '@repo/ui/components/sidebar';
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@repo/ui/components/dropdown-menu';
+
+import { Avatar, AvatarFallback } from '@repo/ui/components/avatar';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@repo/ui/components/alert-dialog';
+
+import { toast } from '@repo/ui/components/toast';
 
 type SidebarItem = {
   href: string;
@@ -60,38 +88,75 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
   },
 ];
 
+function initialsOf(name: string) {
+  const parts = name.trim().replace(/\s+/g, ' ').split(' ');
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
+  return (first + last).toUpperCase() || 'U';
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? session?.user?.email ?? 'User';
+  const userEmail = session?.user?.email ?? '';
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  const handleLogout = () => {
+    setLogoutOpen(false);
+
+    // Revoke the backend token before clearing the NextAuth cookie.
+    // Fire-and-forget: local sign-out proceeds even if the backend is
+    // unreachable (the token then dies at its 15-day expiry anyway).
+    const token = session?.accessToken;
+    if (token) {
+      void fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
+    toast.add({ type: 'success', title: 'Logged out successfully' });
+
+    void signOut({ redirect: true, callbackUrl: 'localhost:3002/auth/logout' });
+  };
 
   return (
     <Sidebar collapsible='icon'>
       <SidebarHeader>
-        {
-          <a
-            href='/dashboard'
-            className='flex items-center gap-2 rounded-md p-2 hover:bg-sidebar-accent'>
-            <Wallet className='size-10 shrink-0 text-sidebar-foreground' />
-            <span className='text-3xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden'>
-              PayPro
-            </span>
-          </a>
-        }
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size='lg'
+              className='group-data-[collapsible=icon]:justify-center gap-2'
+              render={<Link href='/dashboard' />}>
+              <Wallet style={{ width: '1.9rem', height: '1.9rem' }} />
+              <span className='text-3xl font-bold tracking-tight [font-family:var(--font-brand)] group-data-[collapsible=icon]:hidden'>
+                Pay<span className='text-primary'>Pro</span>
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         {SIDEBAR_SECTIONS.map(section => (
           <SidebarGroup key={section.id}>
-            <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+            <SidebarGroupLabel className='text-md font-semibold text-sidebar-foreground/60'>
+              {section.label}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {section.items.map(({ href, label, icon: Icon }) => (
                   <SidebarMenuItem key={href}>
                     <SidebarMenuButton
-                      size='lg'
                       isActive={pathname === href}
                       tooltip={label}
+                      size='lg'
+                      className='group-data-[collapsible=icon]:justify-center'
                       render={<a href={href} />}>
                       <Icon />
-                      <span className='text-lg font-semibold'>{label}</span>
+                      <span className='text-base font-medium group-data-[collapsible=icon]:hidden'>
+                        {label}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -104,12 +169,80 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip='Sign out'
-              render={<Link href='/api/auth/signout' />}>
-              <LogOut />
-              <span>Sign out</span>
-            </SidebarMenuButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    size='lg'
+                    className='group-data-[collapsible=icon]:justify-center'
+                  />
+                }>
+                <Avatar
+                  size='lg'
+                  className='shrink-0 group-data-[collapsible=icon]:size-8'>
+                  <AvatarFallback className='bg-sidebar-accent font-semibold text-sidebar-accent-foreground'>
+                    {initialsOf(userName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className='flex min-w-0 flex-1 flex-col items-start group-data-[collapsible=icon]:hidden'>
+                  <span className='w-full truncate text-sm font-semibold text-sidebar-foreground'>
+                    {userName}
+                  </span>
+                  <span className='w-full truncate text-xs text-sidebar-foreground/60'>
+                    {userEmail}
+                  </span>
+                </div>
+                <ChevronsUpDownIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side='right'>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>
+                    <div className='flex min-w-0 flex-col'>
+                      <span className='truncate text-sm font-semibold'>
+                        {userName}
+                      </span>
+                      <span className='truncate text-xs font-normal'>
+                        {userEmail}
+                      </span>
+                    </div>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem render={<Link href='/account' />}>
+                  <UserRound />
+                  Account
+                </DropdownMenuItem>
+                <DropdownMenuItem render={<Link href='/settings' />}>
+                  <Settings />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant='destructive'
+                  onClick={() => setLogoutOpen(true)}>
+                  <LogOut />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Log out of PayPro?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    You'll need to sign back in to access your wallet.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant='destructive'
+                    onClick={handleLogout}>
+                    Log out
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

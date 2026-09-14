@@ -73,7 +73,6 @@ export default function AccountPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold mb-6 text-gray-900">Account</h1>
 
       <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">

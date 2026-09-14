@@ -42,7 +42,6 @@ export default async function DashboardPage() {
     <DashboardClient
       balance={data.balance}
       transactions={data.transactions}
-      userName={session.user.name || 'User'}
     />
   );
 }

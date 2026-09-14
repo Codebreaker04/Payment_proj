@@ -11,6 +11,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@repo/contracts": "*",
     "@repo/recoil": "*",
     "@repo/ui": "*",
@@ -26,9 +27,9 @@
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.17",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",

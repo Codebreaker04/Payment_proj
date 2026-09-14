@@ -99,7 +99,6 @@ export default function TransferPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold mb-6 text-gray-900">Transfer Money</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">

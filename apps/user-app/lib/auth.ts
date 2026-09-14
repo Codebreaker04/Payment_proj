@@ -92,7 +92,10 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    // 14 days — always shorter than the backend token's 15-day life, so the
+    // session cookie never outlives the access token it carries (which would
+    // leave users "logged in" while every API call 401s).
+    maxAge: 14 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

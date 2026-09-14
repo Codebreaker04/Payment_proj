@@ -18,6 +18,7 @@
     "ui": "@repo/ui/components"
   },
   "rtl": false,
-  "menuColor": "default",
-  "menuAccent": "subtle"
+  "menuColor": "default-translucent",
+  "menuAccent": "subtle",
+  "registries": {}
 }

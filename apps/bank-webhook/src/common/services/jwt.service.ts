@@ -31,10 +31,21 @@ export class JwtService implements IJwtService {
     const email = this.extractRequiredString(payload, 'email');
     const name = this.extractRequiredString(payload, 'name');
 
+    // `tokenVersion` is signed as a JSON number and decodes as a JS number —
+    // jsonwebtoken preserves custom numeric claims. Any token without the
+    // claim predates revocation, so reject it (forces one-time re-login).
+    const tokenVersion = payload['tokenVersion'];
+    if (typeof tokenVersion !== 'number') {
+      throw new UnauthorizedException(
+        'Token payload must include tokenVersion',
+      );
+    }
+
     return {
       id: userId,
       email: email,
       name: name,
+      tokenVersion,
     };
   }
 
@@ -72,7 +83,12 @@ export class JwtService implements IJwtService {
     return value;
   }
 
-  public signToken(userId: string, email: string, name: string | null): string {
+  public signToken(
+    userId: string,
+    email: string,
+    name: string | null,
+    tokenVersion: number,
+  ): string {
     const secret = this.configService.get<string>('JWT_SECRET');
     if (!secret) {
       throw new UnauthorizedException('JWT secret is not configured');
@@ -83,6 +99,7 @@ export class JwtService implements IJwtService {
         userId,
         email,
         name,
+        tokenVersion,
       },
       secret,
       {

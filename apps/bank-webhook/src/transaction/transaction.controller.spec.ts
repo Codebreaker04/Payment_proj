@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '@app/guards/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
 import { AuthenticationService } from '@app/auth/auth.service';
 import { JwtService } from '@app/common/services';
+import { UserRepository } from '@app/user/repository';
 
 describe('TransactionController', () => {
   let controller: TransactionController;
@@ -26,6 +27,10 @@ describe('TransactionController', () => {
         {
           provide: JwtAuthGuard,
           useValue: { canActivate: jest.fn(() => true) },
+        },
+        {
+          provide: UserRepository,
+          useValue: { findById: jest.fn() },
         },
         {
           provide: JwtService,

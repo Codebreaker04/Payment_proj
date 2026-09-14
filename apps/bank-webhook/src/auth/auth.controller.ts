@@ -4,6 +4,8 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
+  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import { AuthenticationService } from './auth.service';
@@ -16,6 +18,8 @@ import type {
   SignupResponseDto,
 } from '@repo/contracts';
 import { ZodValidationPipe } from '@app/pipes/zod-validation.pipe';
+import { JwtAuthGuard } from '@app/guards/jwt-auth.guard';
+import type { AuthenticatedRequest } from '@app/guards/jwt-auth.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -42,5 +46,16 @@ export class AuthController {
   async signup(@Body() payload: SignupRequestDto): Promise<SignupResponseDto> {
     const parsed = SignupRequestSchema.parse(payload);
     return this.authenticationService.register(parsed);
+  }
+
+  @Post('signout')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Log out — revokes all active tokens' })
+  @ApiResponse({ status: 200, description: 'Logged out' })
+  async logout(
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ success: true }> {
+    await this.authenticationService.logout(request.user.id);
+    return { success: true };
   }
 }

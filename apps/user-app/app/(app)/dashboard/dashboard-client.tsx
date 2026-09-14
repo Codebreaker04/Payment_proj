@@ -11,36 +11,14 @@ interface Transaction {
 interface DashboardClientProps {
   balance: number;
   transactions: Transaction[];
-  userName: string;
 }
 
 export function DashboardClient({
   balance,
   transactions,
-  userName,
 }: DashboardClientProps) {
   return (
     <>
-      {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 flex items-center gap-3">
-        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
-          <svg
-            className="w-4 h-4 text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
-        <p className="text-blue-900 font-medium">
-          Welcome back, {userName}! Your account is secure and protected.
-        </p>
-      </div>
-
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Total Balance */}

@@ -8,4 +8,5 @@ import type {
 export interface IAuthService {
   register(payload: SignupRequestDto): Promise<SignupResponseDto>;
   login(payload: LoginRequestDto): Promise<LoginResponseDto>;
+  logout(userId: string): Promise<void>;
 }

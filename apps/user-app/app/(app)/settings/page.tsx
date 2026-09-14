@@ -59,7 +59,6 @@ export default function SettingsPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold mb-6 text-gray-900">Settings</h1>
 
       <section className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Security</h2>
