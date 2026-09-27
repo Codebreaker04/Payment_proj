@@ -84,7 +84,7 @@ export class JwtService implements IJwtService {
   }
 
   public signToken(
-    userId: string,
+    id: string,
     email: string,
     name: string | null,
     tokenVersion: number,
@@ -96,7 +96,7 @@ export class JwtService implements IJwtService {
 
     return sign(
       {
-        userId,
+        id,
         email,
         name,
         tokenVersion,

@@ -1,7 +1,9 @@
 import { Prisma } from '@app/prisma/prisma.types';
 import { PrismaService } from '@app/prisma/prisma.service';
 import { IWalletRepository } from '@app/wallet/interfaces';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class WalletRepository implements IWalletRepository {
   constructor(private readonly prisma: PrismaService) {}
 

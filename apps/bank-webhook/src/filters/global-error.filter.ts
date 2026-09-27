@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 // Global error handler — every failure is serialized as the same envelope
 // the contract response DTOs use: `{ success: false, message }`.
@@ -17,16 +17,23 @@ export class GlobalErrorFilter implements ExceptionFilter {
   private readonly logger = new Logger('GlobalErrorFilter');
 
   catch(exception: unknown, host: ArgumentsHost) {
-    const response = host.switchToHttp().getResponse<Response>();
+    const http = host.switchToHttp();
+    const response = http.getResponse<Response>();
+    const request = http.getRequest<Request>();
 
     const status = this.extractStatus(exception);
     const message = this.extractMessage(exception, status);
+    const context = `${request?.method ?? '-'} ${request?.originalUrl ?? '-'} status=${status} message=${JSON.stringify(message)}`;
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
-        `Request failed: status=${status} message=${JSON.stringify(message)}`,
+        `Request failed: ${context}`,
         exception instanceof Error ? exception : undefined,
       );
+    } else if (status >= HttpStatus.BAD_REQUEST) {
+      // 4xx used to be dropped entirely, so every rejected request (401 from
+      // JwtAuthGuard, 403, 404, 400) left no trace of its reason. Log it.
+      this.logger.warn(`Request rejected: ${context}`);
     }
 
     response.status(status).json({

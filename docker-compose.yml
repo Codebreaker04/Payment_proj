@@ -69,13 +69,13 @@ services:
       context: .
       dockerfile: docker/merchant.Dockerfile
     ports:
-      - '3003:3003'
+      - '3001:3001'
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3002
       API_URL: http://bank-webhook:3002
       DATABASE_URL: postgresql://admin:admin@postgres:5432/payments
       JWT_SECRET: jwt_secret_key_for_authentication
-      NEXTAUTH_URL: http://localhost:3003
+      NEXTAUTH_URL: http://localhost:3001
       NEXTAUTH_SECRET: 7b03c323f56431aba6c12a93b42b43bcb177176aba14225a37acd796adb6281e
     depends_on:
       - postgres

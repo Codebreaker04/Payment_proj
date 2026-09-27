@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -102,22 +102,46 @@ export function AppSidebar() {
   const userEmail = session?.user?.email ?? '';
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setLogoutOpen(false);
 
-    // Revoke the backend token before clearing the NextAuth cookie.
-    // Fire-and-forget: local sign-out proceeds even if the backend is
-    // unreachable (the token then dies at its 15-day expiry anyway).
-    const token = session?.accessToken;
-    if (token) {
-      void fetch(`${API_BASE_URL}/auth/logout`, {
+    // Atomic sign-out: backend token revocation AND NextAuth cookie
+    // clearing must both succeed, or logout is aborted and the user
+    // stays signed in with an error toast.
+    const handleBackendSignout = async () => {
+      const token = session?.accessToken;
+      console.log('Logging out with token:', token);
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE_URL}/auth/signout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {});
-    }
-    toast.add({ type: 'success', title: 'Logged out successfully' });
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to revoke backend token: ${res.status}`);
+      }
+    };
 
-    void signOut({ redirect: true, callbackUrl: 'localhost:3002/auth/logout' });
+    const signoutPromise = (async () => {
+      await handleBackendSignout();
+      // redirect: false — navigation is handled below so a backend
+      // failure cannot leave the user on the login page.
+      await signOut({ redirect: false });
+    })();
+
+    toast.promise(signoutPromise, {
+      loading: 'Logging out...',
+      success: () => {
+        setTimeout(() => {
+          window.location.href = '/auth/signin';
+        }, 1000);
+        return 'You have been logged out successfully.';
+      },
+      error: () => {
+        setLogoutOpen(true);
+        return 'Failed to log out. Please try again.';
+      },
+    });
   };
 
   return (

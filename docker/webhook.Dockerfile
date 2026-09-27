@@ -8,13 +8,14 @@ COPY turbo.json ./
 COPY packages ./packages
 COPY apps/bank-webhook ./apps/bank-webhook
 
-# Install dependencies, generate Prisma client, build database package, and build app
+# Install dependencies, generate Prisma client, then build workspace deps and
+# the app via Turbo. Turbo's ^build ordering compiles @repo/contracts and
+# @repo/database (both resolve from their built dist/) before bank-webhook.
 RUN npm ci && \
     cd packages/database && \
     npx prisma generate && \
-    npm run build && \
-    cd /app/apps/bank-webhook && \
-    npm run build
+    cd /app && \
+    npx turbo build --filter=bank-webhooks
 
 # Set up user
 RUN addgroup --system --gid 1001 nodejs && \
