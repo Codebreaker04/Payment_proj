@@ -1,6 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { WalletRepository } from '../repository';
 import { TransactionRepository } from '@app/transaction/repository/transaction.repository';
+import { toAmount } from '@app/common/utils/amount.util';
 
 @Injectable()
 export class WalletService {
@@ -19,7 +20,11 @@ export class WalletService {
       }
       return {
         success: true,
-        balance: Number(wallet.balance),
+        // The wallet id lets clients tell sent from received: transaction
+        // senderId/receiverId are wallet ids, not user ids.
+        walletId: wallet.id,
+        currency: wallet.currency,
+        balance: toAmount(wallet.balance),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -43,8 +48,12 @@ export class WalletService {
 
       return {
         success: true,
+        walletId: wallet.id,
         count: transactions.length,
-        transactions,
+        transactions: transactions.map((transaction) => ({
+          ...transaction,
+          amount: toAmount(transaction.amount),
+        })),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';

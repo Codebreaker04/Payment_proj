@@ -1,33 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import { DashboardClient } from './dashboard-client';
-import { api } from '@/lib/api';
-
-async function getDashboardData(userId: string, accessToken?: string) {
-  try {
-    const [balanceResponse, transactionsResponse] = await Promise.all([
-      api.getBalance(userId, accessToken),
-      api.getTransactions(userId, 10, 0),
-    ]);
-
-    return {
-      balance: balanceResponse.balance,
-      transactions: transactionsResponse.transactions.map(tx => ({
-        id: tx.id,
-        type: tx.type,
-        amount: tx.amount,
-        status: tx.status,
-        date: tx.createdAt.split('T')[0] ?? tx.createdAt,
-      })),
-    };
-  } catch {
-    return {
-      balance: 0,
-      transactions: [],
-    };
-  }
-}
+import { DashboardClient } from '@/components/dashboard/dashboard-client';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -36,12 +10,7 @@ export default async function DashboardPage() {
     redirect('/auth/signin');
   }
 
-  const data = await getDashboardData(session.user.id, session.accessToken);
-
-  return (
-    <DashboardClient
-      balance={data.balance}
-      transactions={data.transactions}
-    />
-  );
+  // Data is fetched by the client so the dashboard can refresh itself after a
+  // transfer without a full navigation (see dashboard-client.tsx).
+  return <DashboardClient />;
 }

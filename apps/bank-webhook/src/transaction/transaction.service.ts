@@ -16,6 +16,7 @@ import type {
 import { JwtService } from '@app/common/services';
 import { PrismaService } from '@app/prisma/prisma.service';
 import { TransactionRepository } from './repository';
+import { toAmount } from '@app/common/utils/amount.util';
 
 @Injectable()
 export class TransactionService {
@@ -27,6 +28,18 @@ export class TransactionService {
     private readonly jwtService: JwtService,
   ) {
     this.logger.log('TransactionService initialized');
+  }
+
+  private toTransactionDto<T extends { amount: unknown }>(transaction: T) {
+    return { ...transaction, amount: toAmount(transaction.amount) };
+  }
+
+  private toTransactionDtos<T extends { amount: unknown }>(
+    transactions: T[],
+  ): Array<T & { amount: number }> {
+    return transactions.map((transaction) =>
+      this.toTransactionDto(transaction),
+    );
   }
 
   private async createP2PTransaction(
@@ -53,7 +66,7 @@ export class TransactionService {
         transaction: {
           id: existingTransaction.id,
           referenceId: existingTransaction.referenceId,
-          amount: existingTransaction.amount,
+          amount: toAmount(existingTransaction.amount),
           status: existingTransaction.status,
           type: existingTransaction.type,
           createdAt: existingTransaction.createdAt,
@@ -112,7 +125,7 @@ export class TransactionService {
         transaction: {
           id: transaction.id,
           referenceId: transaction.referenceId,
-          amount: transaction.amount,
+          amount: toAmount(transaction.amount),
           status: transaction.status,
           type: transaction.type,
           createdAt: transaction.createdAt,
@@ -172,7 +185,7 @@ export class TransactionService {
     return {
       success: true,
       count: transactions.length,
-      transactions,
+      transactions: this.toTransactionDtos(transactions),
     };
   }
 
@@ -181,7 +194,7 @@ export class TransactionService {
 
     return {
       success: true,
-      transaction,
+      transaction: transaction ? this.toTransactionDto(transaction) : null,
     };
   }
 
@@ -203,8 +216,9 @@ export class TransactionService {
 
       return {
         success: true,
+        walletId: wallet.id,
         count: transactions.length,
-        transactions,
+        transactions: this.toTransactionDtos(transactions),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';

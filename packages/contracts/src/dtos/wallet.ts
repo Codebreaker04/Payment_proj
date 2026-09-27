@@ -4,6 +4,10 @@ import { z } from 'zod';
 export const WalletBalanceSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
+  // Wallet the balance belongs to. Transaction senderId/receiverId are wallet
+  // ids, so clients need this to tell a sent transfer from a received one.
+  walletId: z.string().uuid().optional(),
+  currency: z.string().optional(),
   balance: z.number(),
 });
 export type WalletBalanceDto = z.infer<typeof WalletBalanceSchema>;
@@ -12,6 +16,7 @@ export type WalletBalanceDto = z.infer<typeof WalletBalanceSchema>;
 export const WalletTransactionsResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
+  walletId: z.string().uuid().optional(),
   count: z.number().min(0),
   transactions: z.array(z.unknown()),
 });

@@ -16,11 +16,15 @@ export interface Transaction {
 
 export interface WalletBalance {
   success: boolean;
+  /** Wallet the balance belongs to — matches Transaction.senderId/receiverId. */
+  walletId?: string;
+  currency?: string;
   balance: number;
 }
 
 export interface TransactionListResponse {
   success: boolean;
+  walletId?: string;
   count: number;
   transactions: Transaction[];
 }
@@ -46,6 +50,20 @@ export interface UserSettings {
   emailNotifications: boolean;
   transactionAlerts: boolean;
   twoFactorEnabled: boolean;
+}
+
+/**
+ * Prisma `Decimal` columns reach the browser as strings (`"120.50"`) even
+ * though the contracts declare them as numbers. Coerce on the way in so the
+ * rest of the app can do arithmetic and `toLocaleString()` on `amount`.
+ */
+function toAmount(value: unknown): number {
+  const parsed = typeof value === 'string' ? Number.parseFloat(value) : value;
+  return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : 0;
+}
+
+function withNumericAmount(transaction: Transaction): Transaction {
+  return { ...transaction, amount: toAmount(transaction.amount) };
 }
 
 class ApiClient {
@@ -98,31 +116,64 @@ class ApiClient {
     userId: string,
     limit = 50,
     offset = 0,
+    token?: string,
   ): Promise<TransactionListResponse> {
-    return this.request<TransactionListResponse>(
+    const response = await this.request<TransactionListResponse>(
       `/wallet/transactions/${userId}?limit=${limit}&offset=${offset}`,
+      undefined,
+      token,
     );
+
+    return {
+      ...response,
+      transactions: Array.isArray(response.transactions)
+        ? response.transactions.map(withNumericAmount)
+        : [],
+    };
   }
 
-  async sendP2PTransaction(data: {
-    senderUserId: string;
-    receiverUserId: string;
-    amount: number;
-    description?: string;
-    idempotencyKey: string;
-  }): Promise<TransactionResponse> {
-    return this.request<TransactionResponse>('/transaction/transfer', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async sendP2PTransaction(
+    data: {
+      senderUserId: string;
+      receiverUserId: string;
+      amount: number;
+      description?: string;
+      idempotencyKey: string;
+    },
+    token?: string,
+  ): Promise<TransactionResponse> {
+    const response = await this.request<TransactionResponse>(
+      '/transaction/transfer',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      token,
+    );
+
+    return {
+      ...response,
+      transaction: response.transaction
+        ? withNumericAmount(response.transaction)
+        : response.transaction,
+    };
   }
 
   async getTransactionById(
     id: string,
+    token?: string,
   ): Promise<{ success: boolean; transaction: Transaction }> {
-    return this.request<{ success: boolean; transaction: Transaction }>(
-      `/webhook/transaction/${id}`,
-    );
+    const response = await this.request<{
+      success: boolean;
+      transaction: Transaction;
+    }>(`/webhook/transaction/${id}`, undefined, token);
+
+    return {
+      ...response,
+      transaction: response.transaction
+        ? withNumericAmount(response.transaction)
+        : response.transaction,
+    };
   }
 
   async getProfile(

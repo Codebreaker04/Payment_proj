@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -164,7 +164,7 @@ export function AppSidebar() {
       <SidebarContent>
         {SIDEBAR_SECTIONS.map(section => (
           <SidebarGroup key={section.id}>
-            <SidebarGroupLabel className='text-md font-semibold text-sidebar-foreground/60'>
+            <SidebarGroupLabel className='text-base font-semibold text-sidebar-foreground/60'>
               {section.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -212,7 +212,7 @@ export function AppSidebar() {
                   <span className='w-full truncate text-sm font-semibold text-sidebar-foreground'>
                     {userName}
                   </span>
-                  <span className='w-full truncate text-xs text-sidebar-foreground/60'>
+                  <span className='w-full truncate text-sm text-sidebar-foreground/60'>
                     {userEmail}
                   </span>
                 </div>
@@ -225,7 +225,7 @@ export function AppSidebar() {
                       <span className='truncate text-sm font-semibold'>
                         {userName}
                       </span>
-                      <span className='truncate text-xs font-normal'>
+                      <span className='truncate text-sm font-normal'>
                         {userEmail}
                       </span>
                     </div>
@@ -254,7 +254,7 @@ export function AppSidebar() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Log out of PayPro?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    You'll need to sign back in to access your wallet.
+                    You&apos;ll need to sign back in to access your wallet.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

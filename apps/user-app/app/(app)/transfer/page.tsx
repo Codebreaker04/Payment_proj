@@ -29,7 +29,12 @@ export default function TransferPage() {
 
     void (async () => {
       try {
-        const response = await api.getTransactions(userId, 5, 0);
+        const response = await api.getTransactions(
+          userId,
+          5,
+          0,
+          session?.accessToken,
+        );
         setRecentTransfers(
           Array.isArray(response.transactions) ? response.transactions : [],
         );
@@ -37,7 +42,7 @@ export default function TransferPage() {
         setRecentTransfers([]);
       }
     })();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, session?.accessToken]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -69,23 +74,33 @@ export default function TransferPage() {
       setLoading(true);
       setMessage(null);
 
-      const response = await api.sendP2PTransaction({
-        senderUserId,
-        receiverUserId,
-        amount: parsedAmount,
-        description: description || undefined,
-        idempotencyKey: toIdempotencyKey(),
-      });
+      // The transfer endpoint is JWT-guarded — without the access token every
+      // send fails with a 401.
+      const response = await api.sendP2PTransaction(
+        {
+          senderUserId,
+          receiverUserId,
+          amount: parsedAmount,
+          description: description || undefined,
+          idempotencyKey: toIdempotencyKey(),
+        },
+        session?.accessToken,
+      );
 
       setMessage({
         type: "success",
-        text: `${response.message} (Ref: ${response.transaction.referenceId})`,
+        text: `${response.message} (Ref: ${response.transaction?.referenceId})`,
       });
       setReceiverUserId("");
       setAmount("");
       setDescription("");
 
-      const latest = await api.getTransactions(senderUserId, 5, 0);
+      const latest = await api.getTransactions(
+        senderUserId,
+        5,
+        0,
+        session?.accessToken,
+      );
       setRecentTransfers(
         Array.isArray(latest.transactions) ? latest.transactions : [],
       );
